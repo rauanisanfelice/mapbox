@@ -1,0 +1,113 @@
+body {
+    margin: 0;
+    padding: 0 0 50px 0;
+}
+.search{
+    margin-top: 20px;
+}
+
+#map {
+    position: relative;
+    width: 100%;
+    height: 450px;
+    border: 2px solid lightgray;
+    border-radius: 20px;
+}
+
+.mapboxgl-ctrl-group{
+    margin-top: 30px !important;
+}
+
+.coordinates {
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    position: absolute;
+    bottom: 70px;
+    left: 25px;
+    padding:5px 10px;
+    margin: 0;
+    font-size: 11px;
+    line-height: 18px;
+    border-radius: 3px;
+    display: none;
+}
+
+.texto-gps{
+    text-align: center;
+    font-size: 25px;
+    font-weight: bold;
+    color: black;
+    border-radius: 20px;
+    border: 1px;
+}
+.menu{
+    width: 100px;
+    text-align: center;
+}
+
+.submenu{
+    color:white;
+    font-weight: bold;
+}
+.submenu:hover{
+    color: gray;
+    text-decoration-line: none;
+    font-weight: bold;
+}
+
+#id_username{
+    width: 100%;
+    height: 35px;
+    margin: 0;
+    top: 0;
+    border-radius: 10px;
+    border-color: grey;
+    border-style: solid;
+    padding-left: 15px;
+}
+
+#id_username:focus{
+    border-radius: 10px;
+    border-color: darkgray;
+    border-style: solid;
+    outline: none;
+}
+
+#id_password{
+    width: 100%;
+    height: 35px;
+    margin: 0;
+    top: 0;
+    border-radius: 10px;
+    border-color: grey;
+    border-style: solid;
+    padding-left: 15px;
+}
+
+#id_password:focus{
+    border-radius: 10px;
+    border-color: darkgray;
+    border-style: solid;
+    outline: none;
+}
+
+.fa-search{
+    color: black;
+    font-size: 22px;
+    margin-left: 5px;
+}
+.fa-save{
+    color: black;
+    font-size: 22px;
+    margin-left: 5px;
+}
+.fa-trash-alt{
+    color: black;
+    font-size: 22px;
+    margin-left: 5px;
+}
+.fa-edit{
+    color: black;
+    font-size: 22px;
+    margin-left: 5px;
+}

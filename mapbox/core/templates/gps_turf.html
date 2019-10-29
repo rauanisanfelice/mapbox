@@ -1,0 +1,326 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}GPS{% endblock %}
+{% block body %}
+    <h1>GPS</h1>
+    <div class="row">
+        <div class="col-12">
+            <h5 class="texto-gps" id="check">Mova o ponto para validar a localização.</h5>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div id='map'></div>
+            <pre id='coordinates' class='coordinates'></pre>
+        </div>
+    </div>
+
+{% endblock body %}
+
+{% block script %}
+
+    <script>
+        // ####################################
+        // ####################################
+        // ####################################
+        var token = 'your-token';
+        mapboxgl.accessToken = token;
+        var coordinates = document.getElementById('coordinates');
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-52.9533, -15.8809],
+            zoom: 3,
+            attributionControl: false
+        });
+        var scale = new mapboxgl.ScaleControl({
+            maxWidth: 80,
+            unit: 'metric'
+        });
+        var canvas = map.getCanvasContainer();
+        var retorno = {
+            "type": "geojson",
+            "data": {
+                "type": "FeatureCollection",
+                "features":[]
+            }
+        };
+
+        // ####################################
+        // ####################################
+        // ####################################
+        // FUNCAO LOAD MAPA
+        function LoadMap(Long = -52.9533, Lat = -15.8809, zoom = 3){
+            var nav = new mapboxgl.NavigationControl();
+            map.on();
+            map.addControl(scale);
+            map.addControl(nav, 'top-left');
+            map.setRenderWorldCopies(status === 'true');
+            AdicionaAreaMapa();
+        }
+
+        // ####################################
+        // ####################################
+        // ####################################
+        function onMove(e) {
+            var coords = e.lngLat;
+            canvas.style.cursor = 'grabbing';
+        }
+
+        // ATUALIZA LAT E LONG NA INFO 
+        function onUp(e) {
+            var coords = e.lngLat;
+            coordinates.style.display = 'block';
+            coordinates.innerHTML = 'Longitude: ' + coords.lng + '<br />Latitude: ' + coords.lat;
+            canvas.style.cursor = '';
+            map.off('mousemove', onMove);
+            map.off('touchmove', onMove);
+
+            MontarSource(coords.lat, coords.lng);
+            ValidaCoordenadas(coords.lat, coords.lng);
+        }
+
+        // ####################################
+        // ####################################
+        // ####################################
+        function ValidaCoordenadas(lat_point, long_point){
+            $.ajax({
+                type: "POST",
+                url: '{% url 'valid_gps' %}',
+                data: {
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    'lat_point': lat_point,
+                    'long_point': long_point                 
+                },
+                success: function callback(response){
+                    var var_check = document.getElementById('check');
+                    if(response['result'] === 1){
+                        var_check.style.backgroundColor = "green"
+                        var_check.style.border = "solid green"
+                        var_check.innerHTML = "OK !!";
+                    } else {
+                        var_check.style.backgroundColor = "red"
+                        var_check.style.border = "solid red"
+                        var_check.innerHTML = "FORA !!";
+                    }
+                }
+            });
+        }
+
+        function MontarSource(point_lat  = -15.8809, point_long = -52.9533){
+            var ret = [];
+            var id_anterior = 0;
+            
+            var data = {
+                "type": "FeatureCollection",
+                "features":[]
+            };
+
+            // ########################################
+            // ########################################
+            // INSERE PONTO
+            var point = turf.point([point_long, point_lat],  { "modelId": 0 });            
+            data.features.push(point);
+
+            // ########################################
+            // ########################################
+            // ####################################
+            // ####################################
+            // ####################################
+            var poly = [];
+            var a = 0;
+            {% for area in areas  %}
+                if ("{{ area.ATIVO }}" == 'True') {
+                    Longintude = "{{ area.LONGITUDE }}";
+                    Latitude = "{{ area.LATITUDE }}";
+                    id_area = "{{ area.ID_AREA }}";
+                
+                    Longintude = parseFloat(Longintude.replace(",", "."));
+                    Latitude = parseFloat(Latitude.replace(",", "."));
+
+                    if (a == 0){ id_anterior = id_area; }
+                    if (id_area == id_anterior){
+                        poly.push([Latitude, Longintude]);
+                    } else {
+                        var polygon = turf.polygon([poly], { "modelId": 1 });
+                        data.features.push(polygon);
+                        poly = [];
+                        poly.push([Latitude, Longintude]);
+                    }
+                    id_anterior = id_area;
+                    a = a + 1;
+                }
+            {% endfor %}
+            var polygon = turf.polygon([poly], { "modelId": 1 });
+            data.features.push(polygon);
+            
+
+            // ########################################
+            // ########################################
+            // MONTAR ENDEREÇOS
+            {% for endereco in enderecos %}
+                if ("{{ endereco.ATIVO }}" == 'True') {
+                    Longintude = "{{ endereco.LONGITUDE }}";
+                    Latitude = "{{ endereco.LATITUDE }}";
+                    RadiusInKm = "{{ endereco.RAIO }}";
+
+                    Longintude = parseFloat(Longintude.replace(",", "."));
+                    Latitude = parseFloat(Latitude.replace(",", "."));
+
+                    var point = turf.point([Longintude, Latitude],  { "modelId": 2 });
+                    data.features.push(point);
+
+                    var point2 = turf.point([Longintude, Latitude],  { "modelId": 3 });
+                    data.features.push(point2);
+
+                    var buffered = turf.buffer(point, RadiusInKm, { "units": "kilometers"});
+                    data.features.push(buffered);
+                }
+            {% endfor %}
+            
+
+            // ########################################
+            // ########################################
+            // MONTAR LOJAS
+            {% for loja in lojas %}
+                Longintude = "{{ loja.LONGITUDE }}";
+                Latitude = "{{ loja.LATITUDE }}";
+                RadiusInKm = "{{ loja.RAIO }}";
+            
+                Longintude = parseFloat(Longintude.replace(",", "."));
+                Latitude = parseFloat(Latitude.replace(",", "."));
+
+                var point = turf.point([Longintude, Latitude],  { "modelId": 4 });
+                data.features.push(point);
+
+                var point2 = turf.point([Longintude, Latitude],  { "modelId": 5 });
+                data.features.push(point2);
+
+                var buffered = turf.buffer(point, RadiusInKm, { "units": "kilometers"});
+                data.features.push(buffered);
+            {% endfor %}
+            
+            // ##################################
+            //  POINT MOVE
+            map.addLayer({
+                "id": "point",
+                "type": "circle",
+                "source": "areas",
+                "paint": {
+                    "circle-radius": 6,
+                    "circle-color": "black"
+                },
+                "filter": ["==", "modelId", 0],
+            });
+
+            // ##################################
+            // AREAS
+            map.addLayer({
+                "id": "layout_areas",
+                "type": "fill",
+                "source": "areas",
+                "paint": {
+                    "fill-color": "red",
+                    "fill-opacity": 0.4
+                },
+                "filter": ["==", "modelId", 1]
+            });
+            
+            // ##################################
+            // ENDEREÇO
+            map.addLayer({
+                "id": "layou_endereco",
+                "type": "fill",
+                "source": "areas",
+                "paint": {
+                    "fill-opacity": 0.4,
+                    "fill-color": "blue"
+                },
+                "filter": ["==", "modelId", 2]
+            });
+            map.addLayer({
+                "id": "point_endereco",
+                "type": "circle",
+                "source": "areas",
+                "paint": {
+                    "circle-radius": 6,
+                    "circle-color": "blue"
+                },
+                "filter": ["==", "modelId", 3]
+            });
+
+            // ##################################
+            // LOJA
+            map.addLayer({
+                "id": "layou_loja",
+                "type": "fill",
+                "source": "areas",
+                "paint": {
+                    "fill-opacity": 0.4,
+                    "fill-color": "green"
+                },
+                "filter": ["==", "modelId", 4]
+            });
+            map.addLayer({
+                "id": "point_loja",
+                "type": "circle",
+                "source": "areas",
+                "paint": {
+                    "circle-radius": 6,
+                    "circle-color": "green"
+                },
+                "filter": ["==", "modelId", 5]
+            });
+            // ##################################
+            map.getSource("areas").setData(data);
+        }
+
+
+        // ####################################
+        // ####################################
+        // ####################################
+        function AdicionaAreaMapa(){
+            
+            map.on("load", function() {
+                map.addSource("areas", retorno);
+                MontarSource();
+
+                // ####################################
+                // ####################################
+                // ####################################
+                // FUNÇÕES MOVER POINT
+                map.on('mouseenter', 'point', function() {
+                    map.setPaintProperty('point', 'circle-color', 'grey');
+                    canvas.style.cursor = 'move';
+                });
+
+                map.on('mouseleave', 'point', function() {
+                    map.setPaintProperty('point', 'circle-color', 'black');
+                    canvas.style.cursor = '';
+                });
+
+                map.on('mousedown', 'point', function(e) {
+                    // Prevent the default map drag behavior.
+                    e.preventDefault();
+
+                    canvas.style.cursor = 'grab';
+
+                    map.on('mousemove', onMove);
+                    map.once('mouseup', onUp);
+                });
+
+                map.on('touchstart', 'point', function(e) {
+                    if (e.points.length !== 1) return;
+
+                    // Prevent the default map drag behavior.
+                    e.preventDefault();
+
+                    map.on('touchmove', onMove);
+                    map.once('touchend', onUp);
+                });
+            });
+        }
+    </script>
+    
+{% endblock %}

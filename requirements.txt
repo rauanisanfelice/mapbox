@@ -1,0 +1,6 @@
+Django==2.2.1
+shapely==1.6.4
+pyproj==2.4.0
+wheel==0.33.6 
+psycopg2==2.8.4
+psycopg2-binary==2.8.4 

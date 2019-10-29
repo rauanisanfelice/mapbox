@@ -1,0 +1,44 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}Usuarios{% endblock %}
+{% block body %}
+    <div class="row">
+        <div class="col-12">
+            <h1>Usuarios</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'usuario' %}" class="btn btn-outline-dark">Novo usuário</a>
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-12">
+            <table id="TabelaSeach" cellpadding="5" class="table">
+                <tr class="thead-dark">
+                    <th style="font-weight: bold; width: 20px;">ID</th>
+                    <th style="font-weight: bold;">User Name</th>
+                    <th style="font-weight: bold;">E-mail</th>
+                    <th style="font-weight: bold; width: 100px;">Ações</th>
+                </tr>
+                {% for usuario in usuarios  %}
+                    <tr>
+                        <td>{{ usuario.id }}</td>
+                        <td>{{ usuario.username }}</td>
+                        <td>{{ usuario.email }}</td>
+                        <td>
+                            <a href="#"><i class="fas fa-edit" alt="Visualizar"></i></a>
+                            <a href="#"><i class="fas fa-trash-alt" all="deletar"></i></a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+{% endblock body %}
+
+{% block script %}
+
+{% endblock %}
+

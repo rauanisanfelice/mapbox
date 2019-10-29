@@ -1,0 +1,199 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}Endereços{% endblock %}
+{% block body %}
+
+    <div class="row">
+        <div class="col-12">
+            <h1>Enderecos</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'add_endereco' %}" class="btn btn-outline-dark">Adicionar Endereco</a>
+            <a href="#" onclick="LimparVisualizacao()" class="btn btn-outline-dark">Limpar Visualização</a>
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-8">
+            <table id="TabelaSeach" cellpadding="5" class="table">
+                <thead>
+                    <tr class="thead-dark">
+                        <th style="font-weight: bold;">ID</th>
+                        <th style="font-weight: bold;">Descrição</th>
+                        <th style="font-weight: bold;">Descrição completa</th>
+                        <th style="font-weight: bold;">Latitude</th>
+                        <th style="font-weight: bold;">Longitude</th>
+                        <th style="font-weight: bold;">Raio</th>
+                        <th style="font-weight: bold; min-width: 100px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for endereco in enderecos %}
+                        <tr>
+                            <td>{{ endereco.id }}</td>
+                            <td></td>
+                            <td></td>
+                            <td>{{ endereco.LATITUDE }}</td>
+                            <td>{{ endereco.LONGITUDE }}</td>
+                            <td>{{ endereco.RAIO }}</td>
+                            <td>
+                                <a href="#" onclick="Visualizar('{{ endereco.LONGITUDE }}', '{{ endereco.LATITUDE }}')"><i class="fas fa-search" alt="Visualizar"></i></a>
+                                <a href="{% url 'del_endereco' endereco.id %}"><i class="fas fa-trash-alt" all="deletar"></i></a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-4">
+            <div id='map'></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script>
+        var token = 'your-token';
+        mapboxgl.accessToken = token;
+        
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-52.9533, -15.8809],
+            zoom: 3,
+            attributionControl: false
+        });
+        var marker = new mapboxgl.Marker();
+
+        // FUNCAO DE ATUALIZAR MAPA
+        function LoadMap(Long = -52.9533, Lat = -15.8809, zoom = 3){
+            var nav = new mapboxgl.NavigationControl();
+            map.on();
+            map.addControl(nav, 'top-left');
+            map.setRenderWorldCopies(status === 'true');
+
+            var coord = [];
+            var linha = 1;
+
+            var url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/';
+            {% for endereco in enderecos %}
+                if ("{{ endereco.ATIVO }}" == 'True') {
+                    var url_full = '';
+                    Long = "{{ endereco.LONGITUDE }}";
+                    Lat = "{{ endereco.LATITUDE }}";
+                    var_raio = "{{ endereco.RAIO }}";
+                
+                    Long = parseFloat(Long.replace(",", "."));
+                    Lat = parseFloat(Lat.replace(",", "."));
+                    
+                    coord.push([parseFloat(Lat), parseFloat(Long), parseInt(var_raio)]);
+                    url_full = url+Long+','+Lat+'.json?access_token='+token+'&country=br&language=pt&types=address&limit=1'
+                    APILoad(url_full, linha);
+                    linha = linha + 1;
+                }
+            {% endfor %}
+
+            //console.log(coord);
+            ListarEnderecos(coord);
+        }
+
+        function APILoad(url_full, linha){
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url_full);
+            xhr.setRequestHeader('Content-Type', 'application/json;');
+            xhr.send();
+            var table_desc = document.getElementById("TabelaSeach").rows[linha].cells[1];
+            var table_full_desc = document.getElementById("TabelaSeach").rows[linha].cells[2];
+
+            xhr.onloadend = function(){
+                var jsoncontent = xhr.response;
+                var obj = JSON.parse(jsoncontent);
+                var obj_features = obj['features'];
+                table_desc.innerHTML = obj_features['0']['text'];
+                table_full_desc.innerHTML = obj_features['0']['place_name_pt'];
+            }
+            xhr.onerror = function() { // only triggers if the request couldn't be made at all
+                console.log('Network Error');
+            }
+        }
+
+        function ListarEnderecos(coord, zoom = 10){
+            map.on('load', function(){
+                
+                map.addSource('list-enderecos', {
+                    type: 'geojson',
+                    data: {
+                        type: 'FeatureCollection',
+                        features: []
+                    }
+                });
+
+                var total = coord.length;
+                for (var a = 0; a < total; a++) {
+                    var latitude = coord[a][0];
+                    var longitude = coord[a][1];
+                    var radiusInKm = coord[a][2];
+
+                    map.setZoom(zoom);
+                    map.setCenter([longitude, latitude]);
+
+                    var point = turf.point([longitude, latitude]);
+                    var buffered = turf.buffer(point, radiusInKm, {units: 'kilometers'});
+                    
+                    id_fill = 'endereco_area_' + a;
+                    map.addLayer({
+                        id: id_fill,
+                        type: 'fill',
+                        source: {
+                            type: 'geojson',
+                            data: buffered
+                        },
+                        paint: {
+                            "fill-opacity": 0.4,
+                            "fill-color": "blue"
+                        },
+                    });
+                    id_point = 'endereco_point_' + a;
+                    map.addLayer({
+                        id: id_point,
+                        type: 'circle',
+                        source: {
+                            type: 'geojson',
+                            data: point
+                        },
+                        paint: {
+                            "circle-radius": 4,
+                            "circle-color": "blue"
+                        },
+                    });
+                }
+            });                
+        }
+
+        function Visualizar(Long = -52.9533, Lat = -15.8809, zoom = 15){
+            Long = parseFloat(Long.replace(",", "."));
+            Lat = parseFloat(Lat.replace(",", "."));
+            map.setZoom(zoom);
+            map.setCenter([Long, Lat]);
+            marker.setLngLat([Long, Lat]);
+            marker.addTo(map);
+        }
+
+        function LimparVisualizacao(zoom = 10){
+            map.setZoom(zoom);
+            marker.remove();
+        }
+
+        // FUNCAO DE LOCALIZAR O MELHOR ZOOM
+        function VerificaZoom(texto){
+            texto = texto.toLowerCase();
+            if(texto.indexOf('rua') != -1){
+                return 16; 
+            } else {
+                return 14;
+            }
+        }
+    </script>
+{% endblock %}

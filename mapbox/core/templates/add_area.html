@@ -1,0 +1,93 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}Nova Area{% endblock %}
+{% block body %}
+    <h1>Add Area</h1>
+    <div class="row justify-content-between">
+        <div class="col-5">
+            <b><i><h6>Somente adicionar uma area por vez</h6></i></b>
+        </div>
+        <div class="col-1">
+            <a href="#" class="btn btn-outline-success" onclick="AddArea()">Salvar</a>
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-12">
+            <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v3.0.11/turf.min.js'></script>
+            <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.0.9/mapbox-gl-draw.js'></script>
+            <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.0.9/mapbox-gl-draw.css' type='text/css'/>
+            <div id='map'></div>
+        </div>
+    </div>
+{% endblock body %}
+
+{% block script %}
+    <script>
+        var token = 'your-token';
+        mapboxgl.accessToken = token;
+
+        // COMPONENTES
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-52.9533, -15.8809],
+            zoom: 3,
+            attributionControl: false
+        });
+        var scale = new mapboxgl.ScaleControl({
+            maxWidth: 80,
+            unit: 'metric'
+        });
+
+        var nav = new mapboxgl.NavigationControl();
+        var draw = new MapboxDraw({
+            displayControlsDefault: false,
+            controls: {
+                polygon: true,
+                trash: true
+            }
+        });
+        map.addControl(scale);
+        map.addControl(nav, 'top-left');
+        map.addControl(draw, 'top-right');
+        map.setRenderWorldCopies(status === 'true');
+
+        // FUNCAO DE ATUALIZAR MAPA
+        function LoadMap(Long = -52.9533, Lat = -15.8809, zoom = 3){
+            map.setZoom(zoom);
+            map.setCenter([Long, Lat]);
+        }
+
+        function AddArea(){
+            var data = draw.getAll();
+            var data_text = JSON.stringify(data);
+            var data_json = JSON.parse(data_text);
+
+            var var_id_max = "{{ id_max }}";
+            var nome_area = prompt("Digite o nome da area:");
+            var features = data_json.features[0].geometry.coordinates;
+            var ordem = 0;
+            for( coord in features[0]){
+                Lat = features[0][coord][0];
+                Long = features[0][coord][1];
+                new_area(var_id_max, nome_area, Lat, Long, ordem)
+                ordem = ordem + 1;
+            }
+            alert('Endereço cadastrado!');
+        }
+        
+        async function new_area(var_id_max, nome_area, Lat, Long, ordem){
+            $.ajax({
+                url: "/ajax/new_area/",
+                data: {
+                    'id_area': var_id_max,
+                    'descricao': nome_area,
+                    'latitude': Lat,
+                    'longitude': Long,
+                    'ordem': ordem
+                }
+            });
+        }
+    </script>
+{% endblock %}

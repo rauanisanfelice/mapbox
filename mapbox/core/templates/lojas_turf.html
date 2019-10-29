@@ -1,0 +1,197 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}Lojas{% endblock %}
+{% block body %}
+
+    <div class="row">
+        <div class="col-12">
+            <h1>LOJAS</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'add_loja' %}" class="btn btn-outline-dark">Adicionar Loja</a>
+            <a href="#" onclick="LimparVisualizacao()" class="btn btn-outline-dark">Limpar Visualização</a>
+        </div>  
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-8">
+            <table id="TabelaSeach" cellpadding="5" class="table">
+                <thead>
+                    <tr class="thead-dark">
+                        <th style="font-weight: bold;">ID</th>
+                        <th style="font-weight: bold;">Loja</th>
+                        <th style="font-weight: bold;">Descricao</th>
+                        <th style="font-weight: bold;">Desc Completa</th>
+                        <th style="font-weight: bold;">Latitude</th>
+                        <th style="font-weight: bold;">Longitude</th>
+                        <th style="font-weight: bold;">Raio</th>
+                        <th style="font-weight: bold; min-width: 100px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loja in lojas  %}
+                        <tr>
+                            <td>{{ loja.id }}</td>
+                            <td>{{ loja.DESCRICAO }}</td>
+                            <td></td>
+                            <td></td>
+                            <td>{{ loja.LATITUDE }}</td>
+                            <td>{{ loja.LONGITUDE }}</td>
+                            <td>{{ loja.RAIO }}</td>
+                            <td>
+                                <a href="#" onclick="Visualizar('{{ loja.LONGITUDE }}', '{{ loja.LATITUDE }}', '{{ loja.RAIO }}')"><i class="fas fa-search" alt="Visualizar"></i></a>
+                                <a href="{% url 'del_loja' loja.id %}"><i class="fas fa-trash-alt" all="deletar"></i></a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-4">
+            <div id='map'></div>
+        </div>
+    </div>
+
+{% endblock body %}
+
+{% block script %}
+
+    <script>
+        var token = 'your-token';
+        mapboxgl.accessToken = token;
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-52.9533, -15.8809],
+            zoom: 3,
+            attributionControl: false
+        });
+        var marker = new mapboxgl.Marker();
+
+        // FUNCAO DE ATUALIZAR MAPA
+        function LoadMap(Long = -52.9533, Lat = -15.8809, zoom = 3){
+            var nav = new mapboxgl.NavigationControl();
+            map.on();
+            map.addControl(nav, 'top-left');
+            map.setRenderWorldCopies(status === 'true');
+            
+            var coord = [];
+            var linha = 1;
+            
+            var url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/';
+            {% for loja in lojas %}
+                var url_full = '';
+                Long = "{{ loja.LONGITUDE }}";
+                Lat = "{{ loja.LATITUDE }}";
+            
+                Long = parseFloat(Long.replace(",", "."));
+                Lat = parseFloat(Lat.replace(",", "."));
+
+                coord.push([Lat, Long, parseInt("{{ loja.RAIO }}")]);
+                url_full = url+Long+','+Lat+'.json?access_token='+token+'&country=br&language=pt&types=address&limit=1'
+                APILoad(url_full, linha);
+                linha =  linha + 1;
+            {% endfor %}
+            
+            AdicionarLojasMapas(coord);
+        }
+
+        function APILoad(url_full, linha){
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url_full);
+            xhr.setRequestHeader('Content-Type', 'application/json;');
+            xhr.send();
+            var table_desc = document.getElementById("TabelaSeach").rows[linha].cells[2];
+            var table_full_desc = document.getElementById("TabelaSeach").rows[linha].cells[3];
+            
+            xhr.onloadend = function(){
+                var jsoncontent = xhr.response;
+                var obj = JSON.parse(jsoncontent);
+                var obj_features = obj['features'];
+                table_desc.innerHTML = obj_features['0']['text'];
+                table_full_desc.innerHTML = obj_features['0']['place_name_pt'];
+            }
+        }
+
+        function AdicionarLojasMapas(coord, zoom = 10){
+            map.on('load', function(){
+                
+                map.addSource('list-lojas', {
+                    type: 'geojson',
+                    data: {
+                        type: 'FeatureCollection',
+                        features: []
+                    }
+                });
+
+                var total = coord.length;
+                for (var a = 0; a < total; a++) {
+                    var latitude = coord[a][0];
+                    var longitude = coord[a][1];
+                    var radiusInKm = coord[a][2];
+                    
+                    map.setZoom(zoom);
+                    map.setCenter([longitude, latitude]);
+
+                    var point = turf.point([longitude, latitude]);
+                    var buffered = turf.buffer(point, radiusInKm, {units: 'kilometers'});
+                    
+                    id_fill = 'loja_area_' + a;
+                    map.addLayer({
+                        id: id_fill,
+                        type: 'fill',
+                        source: {
+                            type: 'geojson',
+                            data: buffered
+                        },
+                        paint: {
+                            "fill-opacity": 0.4,
+                            "fill-color": "green"
+                        },
+                    });
+                    id_point = 'loja_point_' + a;
+                    map.addLayer({
+                        id: id_point,
+                        type: 'circle',
+                        source: {
+                            type: 'geojson',
+                            data: point
+                        },
+                        paint: {
+                            "circle-radius": 4,
+                            "circle-color": "green"
+                        },
+                    });
+                }
+            });                
+        }
+
+        function Visualizar(Long = -52.9533, Lat = -15.8809, Raio){
+            Long = parseFloat(Long.replace(",", "."));
+            Lat = parseFloat(Lat.replace(",", "."));
+            zoom = VerificaZoomUnico(Raio);
+            map.setZoom(zoom);
+            map.setCenter([Long, Lat]);
+            marker.setLngLat([Long, Lat]);
+            marker.addTo(map);
+        }
+
+        function LimparVisualizacao(zoom = 10){
+            map.setZoom(zoom);
+            marker.remove();
+        }
+
+        // FUNCAO DE LOCALIZAR O MELHOR ZOOM
+        function VerificaZoomUnico(Raio){
+            if(Raio == 1){
+                return 16; 
+            } else if(Raio == 2) {
+                return 15;
+            } else {
+                return 14;
+            }
+        }
+    </script>
+{% endblock %}

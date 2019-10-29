@@ -1,0 +1,151 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}Nova Loja{% endblock %}
+
+{% block header %}
+{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col-12">
+            <h1>Add Loja</h1>
+        </div>
+    </div>
+    <div class="row justify-content-between">
+        <div class="col-8">
+            <div class="search">
+                <input type="text" class="form-control" name="endereco" id="endereco" onkeyup="SearchLocal()">
+            </div>
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-8">
+            <table id="TabelaSeach" cellpadding="5" class="table">
+                <thead>
+                    <tr class="thead-dark">
+                        <th style="font-weight: bold;">Descrição</th>
+                        <th style="font-weight: bold;">Descrição completa</th>
+                        <th style="font-weight: bold;">Latitude</th>
+                        <th style="font-weight: bold;">Longitude</th>
+                        <th style="font-weight: bold; min-width: 100px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="bodyrows">
+                    <tr></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-4">
+            <div id='map'></div>
+        </div>
+    </div>
+{% endblock body %}
+
+{% block script %}
+
+    <script>
+        var token = 'your-token';
+        mapboxgl.accessToken = token;
+
+        // COMPONENTES
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-52.9533, -15.8809],
+            zoom: 3,
+            attributionControl: false
+        });
+        var marker = new mapboxgl.Marker();
+        var nav = new mapboxgl.NavigationControl();
+        map.addControl(nav, 'top-left');
+        map.setRenderWorldCopies(status === 'true');
+
+        function SearchLocal(){
+            var buscar = document.getElementById('endereco').value;
+            var Table_html = '<div class="row"><div class="col-12"><table id="TabelaSeach" cellpadding="5"  class="table"><tr class="thead-dark"><th style="font-weight: bold;">Descrição</th><th style="font-weight: bold;">Descrição completa</th><th style="font-weight: bold;">Latitude</th><th style="font-weight: bold;">Longitude</th><th style="font-weight: bold;">#</th><th style="font-weight: bold;">#</th></tr><tr></tr></table></div></div>';
+            
+            if (buscar === ""){
+                $("#bodyrows tr").remove(); 
+                LoadMap();
+            } else {
+                var url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/';
+                var url_full = '';
+                url_full = url+buscar+'.json?access_token='+token+'&country=br&language=pt&types=address&limit=10'
+                
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', url_full);
+                xhr.setRequestHeader('Content-Type', 'application/json;');
+                xhr.send();
+
+                xhr.onload = function(){
+                    var jsoncontent = this.response;
+                    var obj = JSON.parse(jsoncontent);
+
+                    var nrow = 1;
+                    var table = document.getElementById('TabelaSeach');
+                    for(p in obj['features']){
+                        var row = document.getElementById('TabelaSeach').insertRow(nrow);
+                        Zoom = VerificaZoom(obj['features'][p]['text']);
+                        Latitude = obj['features'][p]['center'][1];
+                        Longitude = obj['features'][p]['center'][0];
+                        
+                        row.insertCell(0).innerHTML = obj['features'][p]['text'];
+                        row.insertCell(1).innerHTML = obj['features'][p]['place_name_pt'];
+                        row.insertCell(2).innerHTML = Latitude;
+                        row.insertCell(3).innerHTML = Longitude;
+                        row.insertCell(4).innerHTML = '<a href="#" onclick="LoadMap('+Longitude+','+Latitude+','+Zoom+')"><i class="fas fa-search" alt="Visualizar"></i></a> <a href="#" onclick="AddLoja('+Longitude+','+Latitude+','+Zoom+')"><i class="far fa-save"></i></a>';
+                        nrow = nrow + 1;
+                    }
+                }
+            }
+        }
+
+        // FUNCAO DE ATUALIZAR MAPA
+        function LoadMap(Long = -52.9533, Lat = -15.8809, zoom = 3){
+            map.on();
+            map.setZoom(zoom);
+            map.setCenter([Long, Lat]);
+        }
+        
+        function AddLoja(Long, Lat, zoom = 10){
+            map.on();
+            map.setZoom(zoom);
+            map.setCenter([Long, Lat]);
+            marker.setLngLat([Long, Lat]);
+            marker.addTo(map);
+            
+            var loja = prompt("Nome da loja:");
+            var raio = prompt("Raio da loja:");
+            //window.location = '../php/add_loja.php?loja='+loja+'&lat='+Lat+'&long='+Long+'&raio='+raio;
+            $.ajax({                
+                url: "/ajax/new_loja/",
+                data: {
+                    'descricao': loja,
+                    'latitude': Lat,
+                    'longitude': Long,
+                    'raio': raio
+                },
+                dataType: 'json',
+                fail : function(data) {
+                    alert("Successfully");
+                },
+                sucess: function(){
+                    alert('Loja cadastrada!');
+                    window.location('lojas.php');
+                }
+            });
+        }
+
+        // FUNCAO DE LOCALIZAR O MELHOR ZOOM
+        function VerificaZoom(texto){
+            texto = texto.toLowerCase();
+            if(texto.indexOf('rua') != -1){
+                return 16; 
+            } else {
+                return 14;
+            }
+        }
+    </script>
+
+{% endblock %}

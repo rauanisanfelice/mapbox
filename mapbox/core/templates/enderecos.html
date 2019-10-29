@@ -1,0 +1,222 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}Endereços{% endblock %}
+{% block body %}
+
+    <div class="row">
+        <div class="col-12">
+            <h1>Enderecos</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'add_endereco' %}" class="btn btn-outline-dark">Adicionar Endereco</a>
+            <a href="#" onclick="LimparVisualizacao()" class="btn btn-outline-dark">Limpar Visualização</a>
+        </div>
+    </div>
+    <br>
+    
+    <div class="row">
+        <div class="col-8">
+            <table id="TabelaSeach" cellpadding="5" class="table">
+                <thead>
+                    <tr class="thead-dark">
+                        <th style="font-weight: bold;">ID</th>
+                        <th style="font-weight: bold;">Descrição</th>
+                        <th style="font-weight: bold;">Descrição completa</th>
+                        <th style="font-weight: bold;">Latitude</th>
+                        <th style="font-weight: bold;">Longitude</th>
+                        <th style="font-weight: bold;">Raio</th>
+                        <th style="font-weight: bold; min-width: 100px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for endereco in enderecos %}
+                        <tr>
+                            <td>{{ endereco.id }}</td>
+                            <td></td>
+                            <td></td>
+                            <td>{{ endereco.LATITUDE }}</td>
+                            <td>{{ endereco.LONGITUDE }}</td>
+                            <td>{{ endereco.RAIO }}</td>
+                            <td>
+                                <a href="#" onclick="Visualizar('{{ endereco.LONGITUDE }}', '{{ endereco.LATITUDE }}')"><i class="fas fa-search" alt="Visualizar"></i></a>
+                                <a href="{% url 'del_endereco' endereco.id %}"><i class="fas fa-trash-alt" all="deletar"></i></a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-4">
+            <div id='map'></div>
+        </div>
+    </div>
+
+{% endblock body %}
+
+{% block script %}
+
+    <script>
+        var token = 'your-token';
+        mapboxgl.accessToken = token;
+        
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-52.9533, -15.8809],
+            zoom: 3,
+            attributionControl: false
+        });
+        var marker = new mapboxgl.Marker();
+
+        // FUNCAO DE ATUALIZAR MAPA
+        function LoadMap(Long = -52.9533, Lat = -15.8809, zoom = 3){
+            var nav = new mapboxgl.NavigationControl();
+            map.on();
+            map.addControl(nav, 'top-left');
+            map.setRenderWorldCopies(status === 'true');
+
+            var coord = [];
+            var linha = 1;
+
+            var url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/';
+            {% for endereco in enderecos %}
+                if ("{{ endereco.ATIVO }}" == 'True') {
+                    var url_full = '';
+                    Long = "{{ endereco.LONGITUDE }}";
+                    Lat = "{{ endereco.LATITUDE }}";
+                    var_raio = "{{ endereco.RAIO }}";
+                
+                    Long = parseFloat(Long.replace(",", "."));
+                    Lat = parseFloat(Lat.replace(",", "."));
+                    
+                    coord.push([parseFloat(Lat), parseFloat(Long), parseInt(var_raio)]);
+                    url_full = url+Long+','+Lat+'.json?access_token='+token+'&country=br&language=pt&types=address&limit=1'
+                    APILoad(url_full, linha);
+                    linha = linha + 1;
+                }
+            {% endfor %}
+
+            // console.log(coord);
+            ListarEnderecos(coord);
+        }
+
+        function APILoad(url_full, linha){
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url_full);
+            xhr.setRequestHeader('Content-Type', 'application/json;');
+            xhr.send();
+            var table_desc = document.getElementById("TabelaSeach").rows[linha].cells[1];
+            var table_full_desc = document.getElementById("TabelaSeach").rows[linha].cells[2];
+
+            xhr.onloadend = function(){
+                var jsoncontent = xhr.response;
+                var obj = JSON.parse(jsoncontent);
+                var obj_features = obj['features'];
+                table_desc.innerHTML = obj_features['0']['text'];
+                table_full_desc.innerHTML = obj_features['0']['place_name_pt'];
+            }
+
+            xhr.onerror = function() { // only triggers if the request couldn't be made at all
+                console.log('Network Error');
+            }
+        }
+
+        function ListarEnderecos(coord, Long = -52.9533, Lat = -15.8809, zoom = 3){
+            
+            var createGeoJSONCircle = function(coord, points) {
+                var retorno = {
+                                "type":"geojson",
+                                "data": {
+                                    "type":"FeatureCollection",
+                                    "features":[]
+                                }
+                            };
+
+                var total = coord.length;
+                for (var a = 0; a < total; a++) {
+                    if(!points) points = 64;
+                    var latitude = coord[a][0];
+                    var longitude = coord[a][1];
+                    var radiusInKm = coord[a][2];
+                    
+                    var coords = {
+                        latitude: latitude,
+                        longitude: longitude
+                    };
+
+                    var km = radiusInKm;
+                    var ret = [];
+                    var distanceX = km/(111.320*Math.cos(coords.latitude*Math.PI/180));
+                    var distanceY = km/110.574;
+
+                    var theta, x, y;
+                    for(var i=0; i<points; i++) {
+                        theta = (i/points)*(2*Math.PI);
+                        x = distanceX*Math.cos(theta);
+                        y = distanceY*Math.sin(theta);
+                        ret.push([coords.longitude+x, coords.latitude+y]);
+                    }
+                    ret.push(ret[0]);
+                    retorno['data']['features'].push({ "type": "Feature", "geometry": { "type": "Polygon", "coordinates": [ret] }});
+                    retorno['data']['features'].push({ "type": "Feature", "geometry": { "type": "Point", "coordinates": [[coords.longitude], [coords.latitude]]}});
+                }
+                return retorno;
+            };
+            
+            map.on('load', function(){
+                map.setZoom(10);
+                map.setCenter([coord[0][1], coord[0][0]]);
+                
+                map.addSource("polygon", createGeoJSONCircle(coord));
+                map.addLayer({
+                    "id": "polygon",
+                    "type": "fill",
+                    "source": "polygon",
+                    "layout": {},
+                    "paint": {
+                        "fill-color": "blue",
+                        "fill-opacity": 0.5
+                    }
+                });
+                map.addLayer({
+                    "id": "point",
+                    "type": "circle",
+                    "source": "polygon",
+                    "paint": {
+                        "circle-radius": 4,
+                        "circle-color": "blue"
+                    },
+                    "filter": ["==", "$type", "Point"],
+                });
+            });                
+        }
+
+        function Visualizar(Long = -52.9533, Lat = -15.8809, zoom = 15){
+            Long = parseFloat(Long.replace(",", "."));
+            Lat = parseFloat(Lat.replace(",", "."));
+            map.setZoom(zoom);
+            map.setCenter([Long, Lat]);
+            map.setPaintProperty('polygon', 'fill-opacity', 0);
+            marker.setLngLat([Long, Lat]);
+            marker.addTo(map);
+        }
+
+        function LimparVisualizacao(zoom = 10){
+            map.setZoom(zoom);
+            map.setPaintProperty('polygon', 'fill-opacity', 0.5);
+            marker.remove();
+        }
+
+        // FUNCAO DE LOCALIZAR O MELHOR ZOOM
+        function VerificaZoom(texto){
+            texto = texto.toLowerCase();
+            if(texto.indexOf('rua') != -1){
+                return 16; 
+            } else {
+                return 14;
+            }
+        }
+    </script>
+{% endblock %}

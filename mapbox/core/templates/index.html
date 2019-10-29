@@ -1,0 +1,39 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}Inicio{% endblock %}
+{% block body %}
+    <h1>INICIO</h1>
+    <div class="row">
+        <div class="col-12">
+            <div id='map'></div>
+        </div>
+    </div>
+
+{% endblock body %}
+
+{% block script %}
+
+    <script>
+        $(document).ready(function() {
+            var token = 'your-token';
+            mapboxgl.accessToken = token;
+            var map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v11',
+                center: [-52.9533, -15.8809],
+                zoom: 3,
+                attributionControl: false
+            });
+            var scale = new mapboxgl.ScaleControl({
+                maxWidth: 80,
+                unit: 'metric'
+            });
+            var marker = new mapboxgl.Marker();
+            var nav = new mapboxgl.NavigationControl();
+            map.on();
+            map.addControl(scale);
+            map.addControl(nav, 'top-left');
+            map.setRenderWorldCopies(status === 'true');
+        });
+    </script>
+{% endblock %}

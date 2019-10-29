@@ -1,0 +1,130 @@
+{% extends 'template.html' %}
+{% load static %}
+{% block page_title %}Areas{% endblock %}
+{% block body %}
+
+    <div class="row">
+        <div class="col-12">
+            <h1>AREAS</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <a href="{% url 'add_area' %}" class="btn btn-outline-dark">ADD AREAS</a>
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-5">
+            <table id="TabelaSeach" cellpadding="5" class="table">
+                <thead>
+                    <tr class="thead-dark">
+                        <th style="font-weight: bold; width: 20px;">ID</th>
+                        <th style="font-weight: bold;">Descrição</th>
+                        <th style="font-weight: bold; width: 20px;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for area in areas_dist %}
+                        <tr>
+                            <td>{{ area.ID_AREA }}</td>
+                            <td>{{ area.DESCRICAO }}</td>
+                            <td><a href="{% url 'del_area' area.ID_AREA %}"><i class="fas fa-trash-alt" all="deletar"></i></a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-7">
+            <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v3.0.11/turf.min.js'></script>
+            <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.0.9/mapbox-gl-draw.js'></script>
+            <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.0.9/mapbox-gl-draw.css' type='text/css'/>
+            <div id='map'></div>
+        </div>
+    </div>
+{% endblock body %}
+
+{% block script %}
+    <script>
+        var token = 'your-token';
+        mapboxgl.accessToken = token;
+        
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-52.9533, -15.8809],
+            zoom: 3,
+            attributionControl: false
+        });
+        var draw = new MapboxDraw();
+
+        // FUNCAO DE ATUALIZAR MAPA
+        function LoadMap(Long = -52.9533, Lat = -15.8809, zoom = 3){
+            var nav = new mapboxgl.NavigationControl();
+            map.on();
+            map.addControl(nav, 'top-left');
+            map.setRenderWorldCopies(status === 'true');
+            AdicionaAreaMapa();
+        }
+
+        var retorno = {
+            "type": "geojson",
+            "data": {
+                "type": "FeatureCollection",
+                "features":[]
+            }
+        };
+
+        function AdicionaAreaMapa(){
+            
+            var ret = [];
+            var id_anterior = 0;
+            var a = 0;
+            var data = {
+                "type": "FeatureCollection",
+                "features":[]
+            };
+
+            id_area = 0;
+            {% for area in areas  %}
+                Longitude = "{{ area.LONGITUDE }}";
+                Latitude = "{{ area.LATITUDE }}";
+                id_area = "{{ area.ID_AREA }}";
+
+                Longitude = parseFloat(Longitude.replace(",", "."));
+                Latitude = parseFloat(Latitude.replace(",", "."));
+
+                if (a == 0){ id_anterior = id_area; }
+                if (id_area == id_anterior){
+                    ret.push([Latitude, Longitude]);
+                } else {
+                    var polygon = turf.polygon([ret], { "modelId": 1 })
+                    data.features.push(polygon);
+                    ret = [];
+                    ret.push([Latitude, Longitude]);
+                }
+                id_anterior = id_area;
+                a = a + 1;
+            {% endfor %}
+            var polygon = turf.polygon([ret], { "modelId": 1 })
+            data.features.push(polygon);
+
+            // ##################################
+            // AREAS
+            map.on('load', function(){
+                map.addSource("list-areas", retorno);
+                map.getSource('list-areas').setData(data);
+                map.addLayer({
+                    "id": "layout_areas",
+                    "type": "fill",
+                    "source": "list-areas",
+                    "paint": {
+                        "fill-color": "red",
+                        "fill-opacity": 0.4
+                    },
+                    "filter": ["==", "modelId", 1]
+                });
+            });
+        }
+    </script>
+{% endblock %}

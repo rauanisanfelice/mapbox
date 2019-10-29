@@ -1,0 +1,85 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='utf-8' />
+        <title>{% block page_title %}{% endblock %}</title>
+        <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+        <link rel="shortcut icon" href="{% static 'img/favicon.png' %}" />
+        <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.3.1/mapbox-gl.css' rel='stylesheet' />
+        <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+        <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
+        {% block header %}{% endblock %} 
+
+    </head>
+
+    <body onload="LoadMap()">
+        
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <a class="navbar-brand" href="{% url 'login' %}">Login</a>
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav">
+                    <li class="nav-item menu">
+                        <a class="nav-link" href="{% url 'index' %}">Mapa</a>
+                    </li>
+                    <li class="nav-item menu">
+                        <a class="nav-link" href="{% url 'usuarios' %}">Usuarios</a>
+                    </li>
+
+                    {% comment %} MENU NORMAL {% endcomment %}
+                    <li class="nav-item dropdown menu">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Normal
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item submenu" href="{% url 'enderecos' %}">Enderecos</a>
+                            <a class="dropdown-item submenu" href="{% url 'lojas' %}">Lojas</a>
+                            <a class="dropdown-item submenu" href="{% url 'areas' %}">Areas</a>
+                            <a class="dropdown-item submenu" href="{% url 'gps' %}">GPS</a>
+                        </div>
+                    </li>
+
+                    {% comment %} MENU TURF {% endcomment %}
+                    <li class="nav-item dropdown menu">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            TURF
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item submenu" href="{% url 'endereco_turf' %}">Endereços</a>
+                            <a class="dropdown-item submenu" href="{% url 'loja_turf' %}">Lojas</a>
+                            <a class="dropdown-item submenu" href="{% url 'area_turf' %}">Areas</a>
+                            <a class="dropdown-item submenu" href="{% url 'gps_turf' %}">GPS</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <a class="navbar-brand" href="{% url 'logout' %}">Logout</a>
+        </nav>
+
+        <br>
+        {% if user.is_authenticated or request.get_full_path == "/account/login/" %}
+            <div class="container-fluid">
+                {% block body %}
+                {% endblock body %}
+            </div>
+        {% else %}
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-4">
+                        <h1>Realize login <a href="/account/login/">aqui!!</a></h1>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.3.1/mapbox-gl.js'></script>
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+        <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+
+        {% block script %}{% endblock %}
+
+    </body>
+</html>

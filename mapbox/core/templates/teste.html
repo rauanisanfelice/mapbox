@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8' />
+        <title></title>
+        <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.4.0/mapbox-gl.js'></script>
+        <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.4.0/mapbox-gl.css' rel='stylesheet' />
+        <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            #map {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 100%;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id='map'></div>
+        <script>
+            mapboxgl.accessToken = 'your-token';
+            var map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/light-v10',
+                center: [0, 0],
+                zoom: 6
+            });
+            
+            var point = turf.point([0, 0]);
+            var buffered = turf.buffer(point, 500, {units: 'kilometers'});
+            // var center = [0, 0];
+            // var radius = 5;
+            // var options = {steps: 10, units: 'kilometers', properties: {foo: 'bar'}};
+            // var circle = turf.circle(center, radius, options);
+            console.log(buffered);
+            map.on('load', function () {
+                map.addLayer({
+                    id: 'hospitals',
+                    type: 'fill',
+                    source: {
+                        type: 'geojson',
+                        data: buffered
+                    },
+                    paint: {
+                        "fill-opacity": 0.4,
+                        "fill-color": "blue"
+                    },
+                });
+
+                map.addSource('nearest-hospital', {
+                    type: 'geojson',
+                    data: {
+                        type: 'FeatureCollection',
+                        features: []
+                    }
+                });
+            });
+
+        </script>
+    </body>
+</html>
