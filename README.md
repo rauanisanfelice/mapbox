@@ -76,7 +76,7 @@ python3 manage.py makemigrations
 python3 manage.py migrate
 ```
 
-6. Subo o site
+6. Subir o site
 ```
 python3 manage.py runserver
 ```
