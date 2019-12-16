@@ -5,34 +5,41 @@ services:
     image: postgres:10
     container_name: "MAPBOX-POSTGRE"
     environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=docker123
+        - POSTGRES_DB=postgres
+        - POSTGRES_USER=postgres
+        - POSTGRES_PASSWORD=docker123
     ports:
       - 5432:5432
     volumes:
-      - volume-potgre-mapbox:/var/lib/postgresql:rw
-      - volume-postgre-data-mapbox:/var/lib/postgresql/data:rw
+        - volume-potgre-mapbox:/var/lib/postgresql:rw
+        - volume-postgre-data-mapbox:/var/lib/postgresql/data:rw
     networks:
-      - network-postgres-mapbox
+        - network-postgres-mapbox
 
   mapbox-pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:4.16
     container_name: "MAPBOX-PGADMIN"
     environment:
-      PGADMIN_DEFAULT_EMAIL: "admin"
-      PGADMIN_DEFAULT_PASSWORD: "admin"
+        PGADMIN_DEFAULT_EMAIL: "admin"
+        PGADMIN_DEFAULT_PASSWORD: "admin"
     ports:
-      - 80:80
+        - 80:80
+    volumes:
+        - volume-pgadmin-mapbox:/pgadmin4:rw
+        - volume-pgadmin-mapbox-lib:/var/lib/pgadmin:rw
+        - volume-pgadmin-mapbox-certs:/certs:rw
     depends_on:
-      - mapbox-postgre
+        - mapbox-postgre
     networks:
-      - network-postgres-mapbox
+        - network-postgres-mapbox
 
 networks:
-  network-postgres-mapbox:
-    driver: bridge
+    network-postgres-mapbox:
+        driver: bridge
 
 volumes:
-  volume-potgre-mapbox:
-  volume-postgre-data-mapbox:
+    volume-potgre-mapbox:
+    volume-postgre-data-mapbox:
+    volume-pgadmin-mapbox:
+    volume-pgadmin-mapbox-lib:
+    volume-pgadmin-mapbox-certs:
