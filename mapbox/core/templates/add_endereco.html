@@ -120,9 +120,6 @@
                     //csrfmiddlewaretoken: '{{ csrf_token }}'
                 },
                 dataType: 'json',
-                fail : function(data) {
-                    alert("Successfully");
-                },
                 sucess: function(){
                     alert('Endereço cadastrado!');
                     window.location('enderecos.php');
