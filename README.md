@@ -15,7 +15,7 @@ Projeto de geolocalização que utiliza Mapbox.
 
 Neste projeto você consegue:
 * Localizar um endereço e realizar uma demarcação de um raio;
-* Salvar uma loja e realizar uma demarcação de um raio;
+* Salvar uma local e realizar uma demarcação de um raio;
 * Salvar um polígno;
 
 ![Exemplo Área](https://raw.githubusercontent.com/rauanisanfelice/mapbox/master/imgs/EXEMPLO_AREA.png)
